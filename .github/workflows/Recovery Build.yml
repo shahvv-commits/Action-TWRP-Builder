@@ -163,8 +163,5 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: TWRP-Build-${{ github.event.inputs.DEVICE_NAME }}-${{ github.run_id }}
-        path: |
-          workspace/out/target/product/${{ github.event.inputs.DEVICE_NAME }}/*.img
-          workspace/out/target/product/${{ github.event.inputs.DEVICE_NAME }}/*.zip
-          workspace/out/target/product/${{ github.event.inputs.DEVICE_NAME }}/vendor_boot*.img
+        path: workspace/out/target/product/${{ github.event.inputs.DEVICE_NAME }}/**/vendor_boot*.img
         if-no-files-found: error
