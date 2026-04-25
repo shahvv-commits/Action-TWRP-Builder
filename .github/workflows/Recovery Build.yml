@@ -89,11 +89,11 @@ jobs:
         export ALLOW_MISSING_DEPENDENCIES=true
         lunch ${{ github.event.inputs.MAKEFILE_NAME }}-eng
         make clean
-        make ${{ github.event.inputs.BUILD_TARGET }}image -j$(nproc --all)
+        mka ${{ github.event.inputs.BUILD_TARGET }}image
 
     - name: Upload Artifacts
       uses: actions/upload-artifact@v4
       with:
         name: TWRP-Build-${{ github.event.inputs.DEVICE_NAME }}
-        path: workspace/out/target/product/${{ github.event.inputs.DEVICE_NAME }}/*.img
+        path: workspace/out/target/product/${{ github.event.inputs.DEVICE_NAME }}/**
         if-no-files-found: error
