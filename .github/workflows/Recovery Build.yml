@@ -4,18 +4,25 @@ on:
   workflow_dispatch:
     inputs:
       MANIFEST_URL:
+        description: 'Recovery Manifest URL'
         default: 'https://github.com/minimal-manifest-twrp/platform_manifest_twrp_aosp'
       MANIFEST_BRANCH:
+        description: 'Recovery Manifest Branch'
         default: 'twrp-12.1'
       DEVICE_TREE_URL:
+        description: 'Device Tree URL'
         default: 'https://github.com/shahvv-commits/android_device_doogee_P2TH'
       DEVICE_TREE_BRANCH:
+        description: 'Device Tree Branch'
         default: 'main'
       DEVICE_PATH:
+        description: 'Device Path'
         default: 'device/doogee/P2TH'
       DEVICE_NAME:
+        description: 'Device Name'
         default: 'P2TH'
       MAKEFILE_NAME:
+        description: 'Makefile Name'
         default: 'omni_P2TH'
 
 jobs:
@@ -25,13 +32,13 @@ jobs:
       - name: Check Out
         uses: actions/checkout@v4
 
-      - name: Cleanup
+      - name: Cleanup Workspace
         uses: rokibhasansagar/slimhub_actions@main
 
-      - name: Prepare environment
+      - name: Prepare Environment
         run: |
           sudo apt update
-          sudo apt install -y gperf gcc-multilib g++-multilib lib32ncurses-dev libx11-dev lib32z1-dev libgl1-mesa-dev libxml2-utils xsltproc bc liblz4-tool build-essential python3
+          sudo apt install -y gperf gcc-multilib g++-multilib lib32ncurses-dev libx11-dev lib32z1-dev libgl1-mesa-dev libxml2-utils xsltproc bc liblz4-tool build-essential python3 zip curl
 
       - name: Install OpenJDK
         uses: actions/setup-java@v4
@@ -39,47 +46,46 @@ jobs:
           distribution: 'zulu'
           java-version: '11'
 
-      - name: Install repo
+      - name: Install Repo
         run: |
           mkdir ~/bin
           curl https://storage.googleapis.com/git-repo-downloads/repo > ~/bin/repo
           chmod a+x ~/bin/repo
           sudo ln -sf ~/bin/repo /usr/bin/repo
 
-      - name: Initialize repo
+      - name: Initialize and Sync Repo
         run: |
           mkdir workspace
           cd workspace
           git config --global user.name "Nico170420"
           git config --global user.email "b170420nc@gmail.com"
           repo init --depth=1 -u ${{ github.event.inputs.MANIFEST_URL }} -b ${{ github.event.inputs.MANIFEST_BRANCH }}
-          repo sync -j$(nproc --all) --force-sync
+          repo sync -j$(nproc --all) --force-sync --no-tags --no-clone-bundle
 
-      - name: Clone device tree
+      - name: Clone Device Tree
         run: |
           git clone ${{ github.event.inputs.DEVICE_TREE_URL }} -b ${{ github.event.inputs.DEVICE_TREE_BRANCH }} workspace/${{ github.event.inputs.DEVICE_PATH }}
 
-      - name: Set Swap
+      - name: Set Swap Space
         uses: pierotofy/set-swap-space@master
         with:
           swap-size-gb: 12
 
-      - name: Building recovery
+      - name: Building Recovery
         run: |
           cd workspace
           
-          # 1. Bypass Gatekeeper Error
-          find build/make/core/ -type f -name "*.mk" | xargs -I@ sed -i 's/$(error Should not set BOARD_MOVE_RECOVERY_RESOURCES_TO_VENDOR_BOOT/# Bypassed/g' @
-          
-          # 2. Setup Environment Variables
+          # Fix common pathing issues for lunch
           export ALLOW_MISSING_DEPENDENCIES=true
-          source build/envsetup.sh
+          export LC_ALL=C
           
-          # 3. Explicitly force the target directory path
-          export SRC_TARGET_DIR=$(pwd)/build/make/target
+          # Source the build environment
+          . build/envsetup.sh
           
-          # 4. Lunch and Build
-          lunch ${{ github.event.inputs.MAKEFILE_NAME }}-eng
+          # Launch the build
+          lunch ${{ github.event.inputs.MAKEFILE_NAME }}-${{ github.event.inputs.DEVICE_NAME }}-eng || lunch ${{ github.event.inputs.MAKEFILE_NAME }}-eng
+          
+          # Compile the images
           mka recoveryimage vendorbootimage -j$(nproc --all)
 
       - name: Upload Artifacts
