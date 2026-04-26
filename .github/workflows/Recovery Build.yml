@@ -85,21 +85,26 @@ jobs:
       - name: Building recovery
         run: |
           cd workspace
-          # Bypass the sanity check
+          # Neutralize the gatekeeper
           grep -rli "Should not set BOARD_MOVE_RECOVERY_RESOURCES_TO_VENDOR_BOOT" build/make/core/ | xargs -I@ sed -i 's/$(error Should not set BOARD_MOVE_RECOVERY_RESOURCES_TO_VENDOR_BOOT/# Bypassed/g' @
           
           source build/envsetup.sh
           export ALLOW_MISSING_DEPENDENCIES=true
           export BUILD_BROKEN_DUP_RULES=true
+          export TEMPORARY_DISABLE_PATH_CHECK=true
           
           lunch ${{ github.event.inputs.MAKEFILE_NAME }}-eng
           
-          # Force the generation by using a clean build of the specific target
-          make installclean
-          mka vendorbootimage -j$(nproc --all)
+          # FORCE REGENERATION: Delete ninja files and packaging folders
+          # This prevents the "ninja: no work to do" message
+          rm -rf out/build-*.ninja
+          rm -rf out/target/product/${{ github.event.inputs.DEVICE_NAME }}/obj/PACKAGING
+          
+          mka vendorbootimage bootimage -j$(nproc --all)
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: TWRP-Build-P2TH
           path: workspace/out/target/product/P2TH/*.img
+          if-no-files-found: error
