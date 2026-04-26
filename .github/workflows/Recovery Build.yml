@@ -40,63 +40,62 @@ jobs:
   build:
     runs-on: ubuntu-24.04
     steps:
-    - name: Check Out
-      uses: actions/checkout@v4
+      - name: Check Out
+        uses: actions/checkout@v4
 
-    - name: Cleanup
-      uses: rokibhasansagar/slimhub_actions@main
+      - name: Cleanup
+        uses: rokibhasansagar/slimhub_actions@main
 
-    - name: Prepare environment
-      run: |
-        sudo apt update
-        sudo apt install -y gperf gcc-multilib g++-multilib lib32ncurses-dev libx11-dev lib32z1-dev libgl1-mesa-dev libxml2-utils xsltproc bc liblz4-tool build-essential python3
+      - name: Prepare environment
+        run: |
+          sudo apt update
+          sudo apt install -y gperf gcc-multilib g++-multilib lib32ncurses-dev libx11-dev lib32z1-dev libgl1-mesa-dev libxml2-utils xsltproc bc liblz4-tool build-essential python3
 
-    - name: Install OpenJDK
-      uses: actions/setup-java@v4
-      with:
-        distribution: 'zulu'
-        java-version: '11'
+      - name: Install OpenJDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '11'
 
-    - name: Install repo
-      run: |
-        mkdir ~/bin
-        curl https://storage.googleapis.com/git-repo-downloads/repo > ~/bin/repo
-        chmod a+x ~/bin/repo
-        sudo ln -sf ~/bin/repo /usr/bin/repo
+      - name: Install repo
+        run: |
+          mkdir ~/bin
+          curl https://storage.googleapis.com/git-repo-downloads/repo > ~/bin/repo
+          chmod a+x ~/bin/repo
+          sudo ln -sf ~/bin/repo /usr/bin/repo
 
-    - name: Initialize repo
-      run: |
-        mkdir workspace
-        cd workspace
-        git config --global user.name "Nico170420"
-        git config --global user.email "b170420nc@gmail.com"
-        repo init --depth=1 -u ${{ github.event.inputs.MANIFEST_URL }} -b ${{ github.event.inputs.MANIFEST_BRANCH }}
-        repo sync -j$(nproc --all) --force-sync
+      - name: Initialize repo
+        run: |
+          mkdir workspace
+          cd workspace
+          git config --global user.name "Nico170420"
+          git config --global user.email "b170420nc@gmail.com"
+          repo init --depth=1 -u ${{ github.event.inputs.MANIFEST_URL }} -b ${{ github.event.inputs.MANIFEST_BRANCH }}
+          repo sync -j$(nproc --all) --force-sync
 
-    - name: Clone device tree
-      run: |
-        git clone ${{ github.event.inputs.DEVICE_TREE_URL }} -b ${{ github.event.inputs.DEVICE_TREE_BRANCH }} workspace/${{ github.event.inputs.DEVICE_PATH }}
+      - name: Clone device tree
+        run: |
+          git clone ${{ github.event.inputs.DEVICE_TREE_URL }} -b ${{ github.event.inputs.DEVICE_TREE_BRANCH }} workspace/${{ github.event.inputs.DEVICE_PATH }}
 
-    - name: Set Swap
-      uses: pierotofy/set-swap-space@master
-      with:
-        swap-size-gb: 12
+      - name: Set Swap
+        uses: pierotofy/set-swap-space@master
+        with:
+          swap-size-gb: 12
 
-    - name: Building recovery
-      run: |
-        cd workspace
-        source build/envsetup.sh
-        export ALLOW_MISSING_DEPENDENCIES=true
-        # REMOVE the OUT_DIR_COMMON_BASE line to keep paths simple
-        lunch ${{ github.event.inputs.MAKEFILE_NAME }}-eng
-        make installclean
-        mka ${{ github.event.inputs.BUILD_TARGET }}image -j$(nproc --all)
-        
-   - name: Upload Artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: TWRP-Build-${{ github.event.inputs.DEVICE_NAME }}
-        path: |
-          workspace/out/target/product/${{ github.event.inputs.DEVICE_NAME }}/vendor_boot.img
-          workspace/out/target/product/${{ github.event.inputs.DEVICE_NAME }}/obj/PACKAGING/vendor_boot_intermediates/*.img
-        if-no-files-found: error
+      - name: Building recovery
+        run: |
+          cd workspace
+          source build/envsetup.sh
+          export ALLOW_MISSING_DEPENDENCIES=true
+          lunch ${{ github.event.inputs.MAKEFILE_NAME }}-eng
+          make installclean
+          mka ${{ github.event.inputs.BUILD_TARGET }}image -j$(nproc --all)
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: TWRP-Build-${{ github.event.inputs.DEVICE_NAME }}
+          path: |
+            workspace/out/target/product/${{ github.event.inputs.DEVICE_NAME }}/vendor_boot.img
+            workspace/out/target/product/${{ github.event.inputs.DEVICE_NAME }}/obj/PACKAGING/vendor_boot_intermediates/*.img
+          if-no-files-found: error
