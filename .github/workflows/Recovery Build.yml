@@ -64,6 +64,9 @@ jobs:
 
       - name: Clone Device Tree
         run: |
+          # Surgical cleanup to prevent nested folders
+          rm -rf workspace/${{ github.event.inputs.DEVICE_PATH }}
+          # Clone directly into the target device path
           git clone ${{ github.event.inputs.DEVICE_TREE_URL }} -b ${{ github.event.inputs.DEVICE_TREE_BRANCH }} workspace/${{ github.event.inputs.DEVICE_PATH }}
 
       - name: Set Swap Space
@@ -74,18 +77,25 @@ jobs:
       - name: Building Recovery
         run: |
           cd workspace
-          . build/envsetup.sh
           
-          # FORCE FIX: If the build system is lost, tell it exactly where we are
-          export ALLOW_MISSING_DEPENDENCIES=true
-          export mka_args="-j$(nproc --all)"
+          # Verification: Show the tree structure to ensure paths are correct
+          echo "Verifying device tree pathing:"
+          ls -R device/doogee/P2TH
           
-          # This command will tell us EXACTLY what the file looks like during the build
+          # Verification: Print the mk file to the log so we know GitHub sees the new version
           echo "Checking omni_P2TH.mk content inside the runner:"
           cat device/doogee/P2TH/omni_P2TH.mk
           
+          # Initialize Build Environment
+          . build/envsetup.sh
+          export ALLOW_MISSING_DEPENDENCIES=true
+          export LC_ALL=C
+          
+          # Run Lunch
           lunch ${{ github.event.inputs.MAKEFILE_NAME }}-eng
-          mka recoveryimage vendorbootimage $mka_args
+          
+          # Build images
+          mka recoveryimage vendorbootimage -j$(nproc --all)
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
