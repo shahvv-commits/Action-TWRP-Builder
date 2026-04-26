@@ -95,14 +95,14 @@ jobs:
           
           lunch ${{ github.event.inputs.MAKEFILE_NAME }}-eng
           
-          # 2. TOTAL DESTRUCTION: Delete out folder to force image creation
-          rm -rf out
+          # 2. CLEAR PREVIOUS ATTEMPTS: Ensure folder exists but is fresh
+          rm -rf out/target/product/${{ github.event.inputs.DEVICE_NAME }}/*.img
           
-          # 3. Target the image specifically
-          make vendorbootimage -j$(nproc --all)
+          # 3. DUAL TARGET BUILD: We build recoveryimage to force ramdisk generation
+          mka recoveryimage vendorbootimage -j$(nproc --all)
           
           # 4. DEBUG LOG: Show us where the files actually landed
-          echo "--- Locating Build Products ---"
+          echo "--- FINAL PRODUCT LIST ---"
           find out/target/product/${{ github.event.inputs.DEVICE_NAME }}/ -name "*.img"
 
       - name: Upload Artifacts
@@ -110,7 +110,6 @@ jobs:
         with:
           name: TWRP-Build-P2TH
           path: |
-            workspace/out/target/product/P2TH/vendor_boot.img
-            workspace/out/target/product/P2TH/boot.img
             workspace/out/target/product/P2TH/*.img
+            workspace/out/target/product/P2TH/obj/PACKAGING/vendor_boot_intermediates/*.img
           if-no-files-found: error
