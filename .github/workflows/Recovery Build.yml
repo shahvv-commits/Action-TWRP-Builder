@@ -85,32 +85,28 @@ jobs:
       - name: Building recovery
         run: |
           cd workspace
-          # --- DEBUG: LOCATE CORE FILES ---
-          echo "Checking internal build paths..."
-          find build/ -name "core_64bit.mk" | head -n 1
-          find build/ -name "full_base_telephony.mk" | head -n 1
-          
           # 1. Neutralize the gatekeeper checks
           grep -rli "Should not set BOARD_MOVE_RECOVERY_RESOURCES_TO_VENDOR_BOOT" build/make/core/ | xargs -I@ sed -i 's/$(error Should not set BOARD_MOVE_RECOVERY_RESOURCES_TO_VENDOR_BOOT/# Bypassed/g' @
           
+          # 2. Setup build environment
           source build/envsetup.sh
           export ALLOW_MISSING_DEPENDENCIES=true
           export BUILD_BROKEN_DUP_RULES=true
           export TEMPORARY_DISABLE_PATH_CHECK=true
           
+          # 3. Target the lunch combo
           lunch ${{ github.event.inputs.MAKEFILE_NAME }}-eng
           
-          # 2. Force fresh build
-          rm -rf out/target/product/${{ github.event.inputs.DEVICE_NAME }}/*.img
+          # 4. Wipe any stuck Ninja markers
+          rm -rf out/.ninja_db out/.ninja_log out/build-*.ninja
           
-          # 3. Dual target build
+          # 5. Dual build to ensure the ramdisk is compiled and packed
           mka recoveryimage vendorbootimage -j$(nproc --all)
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: TWRP-Build-P2TH
+          name: TWRP-P2TH-Images
           path: |
-            workspace/out/target/product/P2TH/*.img
-            workspace/out/target/product/P2TH/obj/PACKAGING/vendor_boot_intermediates/*.img
-          if-no-files-found: warn
+            workspace/out/target/product/${{ github.event.inputs.DEVICE_NAME }}/*.img
+          if-no-files-found: error
