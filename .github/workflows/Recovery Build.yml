@@ -68,20 +68,17 @@ jobs:
         run: |
           cd workspace
           
-          # 1. FIXED THE GATEKEEPER ERROR
+          # 1. Bypass Gatekeeper Error
           find build/make/core/ -type f -name "*.mk" | xargs -I@ sed -i 's/$(error Should not set BOARD_MOVE_RECOVERY_RESOURCES_TO_VENDOR_BOOT/# Bypassed/g' @
           
-          # 2. POPULATE THE PRODUCT FOLDER
-          # Your Makefile looks in build/make/target/product/
-          # We need to make sure the files are actually there
-          mkdir -p build/make/target/product
-          cp build/target/product/*.mk build/make/target/product/ || true
-          
-          # 3. SET ENVIRONMENT
+          # 2. Setup Environment Variables
           export ALLOW_MISSING_DEPENDENCIES=true
           source build/envsetup.sh
           
-          # 4. LUNCH AND BUILD
+          # 3. Explicitly force the target directory path
+          export SRC_TARGET_DIR=$(pwd)/build/make/target
+          
+          # 4. Lunch and Build
           lunch ${{ github.event.inputs.MAKEFILE_NAME }}-eng
           mka recoveryimage vendorbootimage -j$(nproc --all)
 
