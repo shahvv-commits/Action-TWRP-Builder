@@ -95,5 +95,8 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: TWRP-Build-${{ github.event.inputs.DEVICE_NAME }}
-        path: workspace/out/target/product/${{ github.event.inputs.DEVICE_NAME }}/**
+        path: |
+          workspace/out/target/product/${{ github.event.inputs.DEVICE_NAME }}/*.img
+          workspace/out/target/product/${{ github.event.inputs.DEVICE_NAME }}/*.zip
+          workspace/out/target/product/${{ github.event.inputs.DEVICE_NAME }}/obj/PACKAGING/recovery_patch_intermediates/recovery_from_boot.p
         if-no-files-found: error
