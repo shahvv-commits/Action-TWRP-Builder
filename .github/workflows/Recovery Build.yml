@@ -85,7 +85,7 @@ jobs:
       - name: Building recovery
         run: |
           cd workspace
-          # Neutralize the gatekeeper
+          # 1. Neutralize the Gatekeeper
           grep -rli "Should not set BOARD_MOVE_RECOVERY_RESOURCES_TO_VENDOR_BOOT" build/make/core/ | xargs -I@ sed -i 's/$(error Should not set BOARD_MOVE_RECOVERY_RESOURCES_TO_VENDOR_BOOT/# Bypassed/g' @
           
           source build/envsetup.sh
@@ -95,12 +95,13 @@ jobs:
           
           lunch ${{ github.event.inputs.MAKEFILE_NAME }}-eng
           
-          # FORCE REGENERATION: Delete ninja files and packaging folders
-          # This prevents the "ninja: no work to do" message
-          rm -rf out/build-*.ninja
+          # 2. FORCE NINJA REBUILD
+          # Deleting these specific files forces a fresh packaging run
+          rm -rf out/.ninja_db out/.ninja_log out/build-*.ninja
           rm -rf out/target/product/${{ github.event.inputs.DEVICE_NAME }}/obj/PACKAGING
           
-          mka vendorbootimage bootimage -j$(nproc --all)
+          # 3. Target vendorbootimage specifically
+          mka vendorbootimage -j$(nproc --all)
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
