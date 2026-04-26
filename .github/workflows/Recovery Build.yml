@@ -85,22 +85,26 @@ jobs:
       - name: Building recovery
         run: |
           cd workspace
-          # 1. Neutralize the gatekeeper checks
+          
+          # THE EMERGENCY OVERRIDE: 
+          # Manually link the product folder so 'build/make/target/product/' is always valid
+          mkdir -p build/make/target/product
+          
+          # Neutralize the gatekeeper checks
           grep -rli "Should not set BOARD_MOVE_RECOVERY_RESOURCES_TO_VENDOR_BOOT" build/make/core/ | xargs -I@ sed -i 's/$(error Should not set BOARD_MOVE_RECOVERY_RESOURCES_TO_VENDOR_BOOT/# Bypassed/g' @
           
-          # 2. Setup build environment
           source build/envsetup.sh
+          
+          # Manually defining the variable that keeps failing
+          export SRC_TARGET_DIR=$(pwd)/build/make/target
           export ALLOW_MISSING_DEPENDENCIES=true
           export BUILD_BROKEN_DUP_RULES=true
-          export TEMPORARY_DISABLE_PATH_CHECK=true
           
-          # 3. Target the lunch combo
           lunch ${{ github.event.inputs.MAKEFILE_NAME }}-eng
           
-          # 4. Wipe any stuck Ninja markers
+          # Wipe Ninja markers to force fresh recognition
           rm -rf out/.ninja_db out/.ninja_log out/build-*.ninja
           
-          # 5. Dual build to ensure the ramdisk is compiled and packed
           mka recoveryimage vendorbootimage -j$(nproc --all)
 
       - name: Upload Artifacts
