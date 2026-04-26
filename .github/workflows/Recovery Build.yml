@@ -86,31 +86,20 @@ jobs:
         run: |
           cd workspace
           
-          # THE EMERGENCY OVERRIDE: 
-          # Manually link the product folder so 'build/make/target/product/' is always valid
+          # --- FORCE REPAIR PATHS ---
+          # 1. Locate where core files actually live
+          ACTUAL_PRODUCT_PATH=$(find . -name "core_64bit.mk" | sed 's/\/core_64bit.mk//' | head -n 1)
+          echo "Found product files at: $ACTUAL_PRODUCT_PATH"
+          
+          # 2. Create the exact path the error is looking for
           mkdir -p build/make/target/product
           
-          # Neutralize the gatekeeper checks
+          # 3. Physically move/copy files to satisfy the Makefile
+          if [ ! -z "$ACTUAL_PRODUCT_PATH" ]; then
+            cp -r $ACTUAL_PRODUCT_PATH/* build/make/target/product/
+          fi
+          
+          # 4. Neutralize the gatekeeper checks
           grep -rli "Should not set BOARD_MOVE_RECOVERY_RESOURCES_TO_VENDOR_BOOT" build/make/core/ | xargs -I@ sed -i 's/$(error Should not set BOARD_MOVE_RECOVERY_RESOURCES_TO_VENDOR_BOOT/# Bypassed/g' @
           
-          source build/envsetup.sh
-          
-          # Manually defining the variable that keeps failing
-          export SRC_TARGET_DIR=$(pwd)/build/make/target
-          export ALLOW_MISSING_DEPENDENCIES=true
-          export BUILD_BROKEN_DUP_RULES=true
-          
-          lunch ${{ github.event.inputs.MAKEFILE_NAME }}-eng
-          
-          # Wipe Ninja markers to force fresh recognition
-          rm -rf out/.ninja_db out/.ninja_log out/build-*.ninja
-          
-          mka recoveryimage vendorbootimage -j$(nproc --all)
-
-      - name: Upload Artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: TWRP-P2TH-Images
-          path: |
-            workspace/out/target/product/${{ github.event.inputs.DEVICE_NAME }}/*.img
-          if-no-files-found: error
+          source build
