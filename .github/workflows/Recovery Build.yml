@@ -74,17 +74,11 @@ jobs:
       - name: Building Recovery
         run: |
           cd workspace
-          
-          # Force the build system to see the correct target directory
-          export SRC_TARGET_DIR=$(pwd)/build/make/target
-          export ALLOW_MISSING_DEPENDENCIES=true
-          export LC_ALL=C
-          
-          # Source the build environment
+          # The dot and space are vital!
           . build/envsetup.sh
-          
-          # Launch the build process
-          lunch ${{ github.event.inputs.MAKEFILE_NAME }}-${{ github.event.inputs.DEVICE_NAME }}-eng || lunch ${{ github.event.inputs.MAKEFILE_NAME }}-eng
+          export ALLOW_MISSING_DEPENDENCIES=true
+          lunch ${{ github.event.inputs.MAKEFILE_NAME }}-eng
+          mka recoveryimage vendorbootimage -j$(nproc --all)
           
           # Compile images
           mka recoveryimage vendorbootimage -j$(nproc --all)
