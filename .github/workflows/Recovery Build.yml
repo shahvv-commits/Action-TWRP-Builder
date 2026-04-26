@@ -87,14 +87,16 @@ jobs:
         cd workspace
         source build/envsetup.sh
         export ALLOW_MISSING_DEPENDENCIES=true
+        export OUT_DIR_COMMON_BASE=/home/runner/work/Action-TWRP-Builder/Action-TWRP-Builder/new_out
         lunch ${{ github.event.inputs.MAKEFILE_NAME }}-eng
-        # Force delete the output folder to make Ninja work
-        rm -rf out/target/product/${{ github.event.inputs.DEVICE_NAME }}
+        # Force the build of the specific image file, not just the target
         mka ${{ github.event.inputs.BUILD_TARGET }}image -j$(nproc --all)
 
     - name: Upload Artifacts
       uses: actions/upload-artifact@v4
       with:
         name: TWRP-Build-${{ github.event.inputs.DEVICE_NAME }}
-        path: workspace/out/target/product/${{ github.event.inputs.DEVICE_NAME }}/obj/PACKAGING/
+        path: |
+          new_out/**/${{ github.event.inputs.DEVICE_NAME }}/**/*.img
+          new_out/**/${{ github.event.inputs.DEVICE_NAME }}/**/ramdisk*
         if-no-files-found: error
