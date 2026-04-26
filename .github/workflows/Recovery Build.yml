@@ -77,26 +77,16 @@ jobs:
       - name: Building Recovery
         run: |
           cd workspace
-          
-          # Verification: Show the tree structure to ensure paths are correct
-          echo "Verifying device tree pathing:"
-          ls -R device/doogee/P2TH
-          
-          # Verification: Print the mk file to the log so we know GitHub sees the new version
-          echo "Checking omni_P2TH.mk content inside the runner:"
-          cat device/doogee/P2TH/omni_P2TH.mk
-          
-          # Initialize Build Environment
           . build/envsetup.sh
+          
+          # This helps the Makefile find the core_64bit.mk file
+          export SRC_TARGET_DIR=$(pwd)/build/make/target
+          [ ! -d "$SRC_TARGET_DIR" ] && export SRC_TARGET_DIR=$(pwd)/build/target
+          
           export ALLOW_MISSING_DEPENDENCIES=true
-          export LC_ALL=C
-          
-          # Run Lunch
           lunch ${{ github.event.inputs.MAKEFILE_NAME }}-eng
-          
-          # Build images
           mka recoveryimage vendorbootimage -j$(nproc --all)
-
+          
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
