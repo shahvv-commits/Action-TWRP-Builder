@@ -85,9 +85,9 @@ jobs:
       - name: Building recovery
         run: |
           cd workspace
-          # FORCED BYPASS: Comment out the line that checks for vendor_boot image building
-          # This stops the 'Should not set BOARD_MOVE_RECOVERY_RESOURCES_TO_VENDOR_BOOT' error
-          sed -i 's/$(error Should not set BOARD_MOVE_RECOVERY_RESOURCES_TO_VENDOR_BOOT if not building vendor_boot image.)/# Bypassed/g' build/make/core/board_config.mk
+          # FORCED BYPASS: We search for the error string in the entire build directory 
+          # and replace the $(error ...) command with a comment.
+          grep -rli "Should not set BOARD_MOVE_RECOVERY_RESOURCES_TO_VENDOR_BOOT" build/make/core/ | xargs -I@ sed -i 's/$(error Should not set BOARD_MOVE_RECOVERY_RESOURCES_TO_VENDOR_BOOT/# Bypassed/g' @
           
           source build/envsetup.sh
           export ALLOW_MISSING_DEPENDENCIES=true
