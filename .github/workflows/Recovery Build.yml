@@ -11,19 +11,6 @@ on:
         default: 'twrp-12.1'
       DEVICE_TREE_URL:
         description: 'Device Tree URL'
-        default: 'https://github.com/shahvv-commits/android_device_doogee_P2TH'name: Recovery Build
-
-on:
-  workflow_dispatch:
-    inputs:
-      MANIFEST_URL:
-        description: 'Recovery Manifest URL'
-        default: 'https://github.com/minimal-manifest-twrp/platform_manifest_twrp_aosp'
-      MANIFEST_BRANCH:
-        description: 'Recovery Manifest Branch'
-        default: 'twrp-12.1'
-      DEVICE_TREE_URL:
-        description: 'Device Tree URL'
         default: 'https://github.com/shahvv-commits/android_device_doogee_P2TH'
       DEVICE_TREE_BRANCH:
         description: 'Device Tree Branch'
@@ -88,101 +75,18 @@ jobs:
         run: |
           cd workspace
           
-          # Force set the target directory for the makefiles
+          # Force the build system to see the correct target directory
           export SRC_TARGET_DIR=$(pwd)/build/make/target
-          export ALLOW_MISSING_DEPENDENCIES=true
-          export LC_ALL=C
-          
-          # Initialize build environment
-          . build/envsetup.sh
-          
-          # Lunch targeting the specific makefile name
-          lunch ${{ github.event.inputs.MAKEFILE_NAME }}-eng || lunch twrp_${{ github.event.inputs.DEVICE_NAME }}-eng
-          
-          # Start compilation
-          mka recoveryimage vendorbootimage -j$(nproc --all)
-
-      - name: Upload Artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: TWRP-P2TH-Images
-          path: |
-            workspace/out/target/product/${{ github.event.inputs.DEVICE_NAME }}/*.img
-          if-no-files-found: error
-      DEVICE_TREE_BRANCH:
-        description: 'Device Tree Branch'
-        default: 'main'
-      DEVICE_PATH:
-        description: 'Device Path'
-        default: 'device/doogee/P2TH'
-      DEVICE_NAME:
-        description: 'Device Name'
-        default: 'P2TH'
-      MAKEFILE_NAME:
-        description: 'Makefile Name'
-        default: 'omni_P2TH'
-
-jobs:
-  build:
-    runs-on: ubuntu-24.04
-    steps:
-      - name: Check Out
-        uses: actions/checkout@v4
-
-      - name: Cleanup Workspace
-        uses: rokibhasansagar/slimhub_actions@main
-
-      - name: Prepare Environment
-        run: |
-          sudo apt update
-          sudo apt install -y gperf gcc-multilib g++-multilib lib32ncurses-dev libx11-dev lib32z1-dev libgl1-mesa-dev libxml2-utils xsltproc bc liblz4-tool build-essential python3 zip curl
-
-      - name: Install OpenJDK
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'zulu'
-          java-version: '11'
-
-      - name: Install Repo
-        run: |
-          mkdir ~/bin
-          curl https://storage.googleapis.com/git-repo-downloads/repo > ~/bin/repo
-          chmod a+x ~/bin/repo
-          sudo ln -sf ~/bin/repo /usr/bin/repo
-
-      - name: Initialize and Sync Repo
-        run: |
-          mkdir workspace
-          cd workspace
-          git config --global user.name "Nico170420"
-          git config --global user.email "b170420nc@gmail.com"
-          repo init --depth=1 -u ${{ github.event.inputs.MANIFEST_URL }} -b ${{ github.event.inputs.MANIFEST_BRANCH }}
-          repo sync -j$(nproc --all) --force-sync --no-tags --no-clone-bundle
-
-      - name: Clone Device Tree
-        run: |
-          git clone ${{ github.event.inputs.DEVICE_TREE_URL }} -b ${{ github.event.inputs.DEVICE_TREE_BRANCH }} workspace/${{ github.event.inputs.DEVICE_PATH }}
-
-      - name: Set Swap Space
-        uses: pierotofy/set-swap-space@master
-        with:
-          swap-size-gb: 12
-
-      - name: Building Recovery
-        run: |
-          cd workspace
-          
-          # Fix common pathing issues for lunch
           export ALLOW_MISSING_DEPENDENCIES=true
           export LC_ALL=C
           
           # Source the build environment
           . build/envsetup.sh
           
-          # Launch the build
+          # Launch the build process
           lunch ${{ github.event.inputs.MAKEFILE_NAME }}-${{ github.event.inputs.DEVICE_NAME }}-eng || lunch ${{ github.event.inputs.MAKEFILE_NAME }}-eng
           
-          # Compile the images
+          # Compile images
           mka recoveryimage vendorbootimage -j$(nproc --all)
 
       - name: Upload Artifacts
