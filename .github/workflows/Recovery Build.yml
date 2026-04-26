@@ -74,13 +74,15 @@ jobs:
       - name: Building Recovery
         run: |
           cd workspace
-          # The dot and space are vital!
+          # The dot and space are vital for loading the build environment!
           . build/envsetup.sh
           export ALLOW_MISSING_DEPENDENCIES=true
-          lunch ${{ github.event.inputs.MAKEFILE_NAME }}-eng
-          mka recoveryimage vendorbootimage -j$(nproc --all)
+          export LC_ALL=C
           
-          # Compile images
+          # Lunch targeting your specific device
+          lunch ${{ github.event.inputs.MAKEFILE_NAME }}-eng
+          
+          # Compile the images
           mka recoveryimage vendorbootimage -j$(nproc --all)
 
       - name: Upload Artifacts
