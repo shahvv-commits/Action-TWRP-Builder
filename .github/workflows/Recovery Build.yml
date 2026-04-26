@@ -32,9 +32,9 @@ on:
         required: true
         default: 'omni_P2TH'
       BUILD_TARGET:
-        description: 'BUILD_TARGET (recovery or vendorboot)'
+        description: 'BUILD_TARGET'
         required: true
-        default: 'vendorboot'
+        default: 'vendorbootimage'
 
 jobs:
   build:
@@ -85,23 +85,21 @@ jobs:
       - name: Building recovery
         run: |
           cd workspace
-          # BYPASS: Keep the error silencing active
+          # Bypass the sanity check
           grep -rli "Should not set BOARD_MOVE_RECOVERY_RESOURCES_TO_VENDOR_BOOT" build/make/core/ | xargs -I@ sed -i 's/$(error Should not set BOARD_MOVE_RECOVERY_RESOURCES_TO_VENDOR_BOOT/# Bypassed/g' @
           
           source build/envsetup.sh
           export ALLOW_MISSING_DEPENDENCIES=true
           export BUILD_BROKEN_DUP_RULES=true
-          export TEMPORARY_DISABLE_PATH_CHECK=true
           
           lunch ${{ github.event.inputs.MAKEFILE_NAME }}-eng
           
-          # FORCED REBUILD: We wipe the output folder so Ninja has to work
-          make clean
-          
-          # Build both boot and vendor_boot to ensure the GKI packaging script triggers
-          mka bootimage vendorbootimage -j$(nproc --all)
+          # Force the generation by using a clean build of the specific target
+          make installclean
+          mka vendorbootimage -j$(nproc --all)
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: TWRP
+          name: TWRP-Build-P2TH
+          path: workspace/out/target/product/P2TH/*.img
