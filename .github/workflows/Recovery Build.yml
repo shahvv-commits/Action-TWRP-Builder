@@ -85,31 +85,29 @@ jobs:
       - name: Building recovery
         run: |
           cd workspace
-          # 1. Neutralize the gatekeeper checks
+          # Silence gatekeeper
           grep -rli "Should not set BOARD_MOVE_RECOVERY_RESOURCES_TO_VENDOR_BOOT" build/make/core/ | xargs -I@ sed -i 's/$(error Should not set BOARD_MOVE_RECOVERY_RESOURCES_TO_VENDOR_BOOT/# Bypassed/g' @
           
           source build/envsetup.sh
           export ALLOW_MISSING_DEPENDENCIES=true
           export BUILD_BROKEN_DUP_RULES=true
-          export TEMPORARY_DISABLE_PATH_CHECK=true
           
           lunch ${{ github.event.inputs.MAKEFILE_NAME }}-eng
           
-          # 2. CLEAR PREVIOUS ATTEMPTS: Ensure folder exists but is fresh
-          rm -rf out/target/product/${{ github.event.inputs.DEVICE_NAME }}/*.img
+          # FORCE REBUILD: Wipe Ninja markers
+          rm -rf out/.ninja_db out/.ninja_log out/build-*.ninja
           
-          # 3. DUAL TARGET BUILD: We build recoveryimage to force ramdisk generation
+          # Dual target to force ramdisk inclusion
           mka recoveryimage vendorbootimage -j$(nproc --all)
           
-          # 4. DEBUG LOG: Show us where the files actually landed
-          echo "--- FINAL PRODUCT LIST ---"
+          # Debug find
+          echo "--- SEARCH RESULTS ---"
           find out/target/product/${{ github.event.inputs.DEVICE_NAME }}/ -name "*.img"
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: TWRP-Build-P2TH
+          name: TWRP-P2TH-Artifacts
           path: |
-            workspace/out/target/product/P2TH/*.img
-            workspace/out/target/product/P2TH/obj/PACKAGING/vendor_boot_intermediates/*.img
+            workspace/out/target/product/${{ github.event.inputs.DEVICE_NAME }}/*.img
           if-no-files-found: error
