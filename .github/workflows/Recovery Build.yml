@@ -69,12 +69,13 @@ jobs:
           cd workspace
           
           # 1. FIXED THE GATEKEEPER ERROR
-          # We search for the specific error string and comment it out
           find build/make/core/ -type f -name "*.mk" | xargs -I@ sed -i 's/$(error Should not set BOARD_MOVE_RECOVERY_RESOURCES_TO_VENDOR_BOOT/# Bypassed/g' @
           
-          # 2. FORCE SYMLINK FOR PATHS
-          # This makes sure build/make/target/product is visible to the makefile
+          # 2. POPULATE THE PRODUCT FOLDER
+          # Your Makefile looks in build/make/target/product/
+          # We need to make sure the files are actually there
           mkdir -p build/make/target/product
+          cp build/target/product/*.mk build/make/target/product/ || true
           
           # 3. SET ENVIRONMENT
           export ALLOW_MISSING_DEPENDENCIES=true
@@ -88,4 +89,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: TWRP-P2TH-Images
-          path: workspace/out/target/product/P2TH/*.img
+          path: |
+            workspace/out/target/product/${{ github.event.inputs.DEVICE_NAME }}/*.img
+          if-no-files-found: error
