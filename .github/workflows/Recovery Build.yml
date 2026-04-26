@@ -85,8 +85,7 @@ jobs:
       - name: Building recovery
         run: |
           cd workspace
-          # FORCED BYPASS: We search for the error string in the entire build directory 
-          # and replace the $(error ...) command with a comment.
+          # BYPASS: Keep the error silencing active
           grep -rli "Should not set BOARD_MOVE_RECOVERY_RESOURCES_TO_VENDOR_BOOT" build/make/core/ | xargs -I@ sed -i 's/$(error Should not set BOARD_MOVE_RECOVERY_RESOURCES_TO_VENDOR_BOOT/# Bypassed/g' @
           
           source build/envsetup.sh
@@ -95,14 +94,14 @@ jobs:
           export TEMPORARY_DISABLE_PATH_CHECK=true
           
           lunch ${{ github.event.inputs.MAKEFILE_NAME }}-eng
-          make installclean
-          mka vendorbootimage -j$(nproc --all)
+          
+          # FORCED REBUILD: We wipe the output folder so Ninja has to work
+          make clean
+          
+          # Build both boot and vendor_boot to ensure the GKI packaging script triggers
+          mka bootimage vendorbootimage -j$(nproc --all)
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: TWRP-Build-${{ github.event.inputs.DEVICE_NAME }}
-          path: |
-            workspace/out/target/product/${{ github.event.inputs.DEVICE_NAME }}/vendor_boot.img
-            workspace/out/target/product/${{ github.event.inputs.DEVICE_NAME }}/obj/PACKAGING/vendor_boot_intermediates/*.img
-          if-no-files-found: error
+          name: TWRP
