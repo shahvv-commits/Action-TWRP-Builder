@@ -87,11 +87,11 @@ jobs:
         cd workspace
         source build/envsetup.sh
         export ALLOW_MISSING_DEPENDENCIES=true
-        export OUT_DIR_COMMON_BASE=/home/runner/work/Action-TWRP-Builder/Action-TWRP-Builder/new_out
+        # REMOVE the OUT_DIR_COMMON_BASE line to keep paths simple
         lunch ${{ github.event.inputs.MAKEFILE_NAME }}-eng
-        # Force the build of the specific image file, not just the target
+        make installclean
         mka ${{ github.event.inputs.BUILD_TARGET }}image -j$(nproc --all)
-
+        
    - name: Upload Artifacts
       uses: actions/upload-artifact@v4
       with:
