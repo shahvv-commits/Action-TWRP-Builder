@@ -74,16 +74,18 @@ jobs:
       - name: Building Recovery
         run: |
           cd workspace
-          # The dot and space are vital for loading the build environment!
           . build/envsetup.sh
+          
+          # FORCE FIX: If the build system is lost, tell it exactly where we are
           export ALLOW_MISSING_DEPENDENCIES=true
-          export LC_ALL=C
+          export mka_args="-j$(nproc --all)"
           
-          # Lunch targeting your specific device
+          # This command will tell us EXACTLY what the file looks like during the build
+          echo "Checking omni_P2TH.mk content inside the runner:"
+          cat device/doogee/P2TH/omni_P2TH.mk
+          
           lunch ${{ github.event.inputs.MAKEFILE_NAME }}-eng
-          
-          # Compile the images
-          mka recoveryimage vendorbootimage -j$(nproc --all)
+          mka recoveryimage vendorbootimage $mka_args
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
