@@ -85,7 +85,7 @@ jobs:
       - name: Building recovery
         run: |
           cd workspace
-          # 1. Bypass the gatekeeper checks
+          # 1. Neutralize the gatekeeper checks
           grep -rli "Should not set BOARD_MOVE_RECOVERY_RESOURCES_TO_VENDOR_BOOT" build/make/core/ | xargs -I@ sed -i 's/$(error Should not set BOARD_MOVE_RECOVERY_RESOURCES_TO_VENDOR_BOOT/# Bypassed/g' @
           
           source build/envsetup.sh
@@ -95,19 +95,22 @@ jobs:
           
           lunch ${{ github.event.inputs.MAKEFILE_NAME }}-eng
           
-          # 2. THE FORCE: Shred the Ninja database and output metadata
-          # This gives the build system "amnesia" so it has to rewrite the files
-          rm -rf out/.ninja_log out/.ninja_db out/build-*.ninja
-          rm -rf out/target/product/${{ github.event.inputs.DEVICE_NAME }}/obj/PACKAGING
+          # 2. TOTAL DESTRUCTION: Delete out folder to force image creation
+          rm -rf out
           
-          # 3. Execution
-          mka vendorbootimage bootimage -j$(nproc --all)
+          # 3. Target the image specifically
+          make vendorbootimage -j$(nproc --all)
+          
+          # 4. DEBUG LOG: Show us where the files actually landed
+          echo "--- Locating Build Products ---"
+          find out/target/product/${{ github.event.inputs.DEVICE_NAME }}/ -name "*.img"
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: TWRP-Build-P2TH
           path: |
+            workspace/out/target/product/P2TH/vendor_boot.img
+            workspace/out/target/product/P2TH/boot.img
             workspace/out/target/product/P2TH/*.img
-            workspace/out/target/product/P2TH/obj/PACKAGING/vendor_boot_intermediates/*.img
           if-no-files-found: error
