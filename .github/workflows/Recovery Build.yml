@@ -76,24 +76,33 @@ jobs:
         run: |
           cd workspace
           
-          # 1. Force the physical directory structure
-          echo "Reconstructing Build System..."
+          # 1. PHYSICAL RECONSTRUCTION (Must happen before sourcing anything)
+          echo "Force-fetching official Google build tools..."
           rm -rf build/make
           git clone https://android.googlesource.com/platform/build -b android-12.1.0_r27 build_tmp --depth=1
           
-          # Move the core tools into the standard location
+          echo "Moving files to final location..."
           mkdir -p build/make
-          cp -r build_tmp/* build/make/
+          cp -rp build_tmp/* build/make/
           rm -rf build_tmp
+          
+          # Force sync the filesystem to ensure files are visible
+          sync
+          sleep 5
 
-          # 2. Setup Environment
+          # 2. VERIFICATION (Check physical existence again)
+          if [ -f "build/make/target/product/core_64bit.mk" ]; then
+             echo "SUCCESS: CORE FILE VERIFIED AT $(pwd)/build/make/target/product/core_64bit.mk"
+          else
+             echo "CRITICAL FAILURE: Files not found after copy!"
+             exit 1
+          fi
+
+          # 3. Environment Setup
           export ALLOW_MISSING_DEPENDENCIES=true
           export LC_ALL=C
           . build/make/envsetup.sh
           
-          # 3. Verification of physical existence
-          ls -l build/make/target/product/core_64bit.mk && echo "CORE FILE PHYSICALLY PRESENT"
-
           # 4. Lunch and Build
           lunch ${{ github.event.inputs.MAKEFILE_NAME }}-eng
           mka recoveryimage vendorbootimage -j$(nproc --all)
