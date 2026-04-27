@@ -76,13 +76,14 @@ jobs:
         run: |
           cd workspace
           
-          # 1. Download official build system core to a temp folder
-          echo "Downloading official Google Build Tools..."
+          # 1. Provide the Build System Core
+          echo "Fetching build system core..."
+          rm -rf build_core
           git clone https://android.googlesource.com/platform/build -b android-12.1.0_r27 build_core --depth=1
           
-          # 2. FLATTEN THE STRUCTURE
-          # We place the 'target' folder in the root so 'target/product/...' works
-          echo "Flattening build structure for minimal manifest..."
+          # 2. PHYSICAL LOCKDOWN
+          # We physically place the 'target' folder in the workspace root
+          echo "Injecting target folders..."
           rm -rf target build/make
           mkdir -p build/make
           cp -r build_core/* build/make/
@@ -93,7 +94,11 @@ jobs:
           export LC_ALL=C
           . build/make/envsetup.sh
           
-          # 4. Lunch and Build
+          # 4. Verification
+          echo "Checking path: $(pwd)/target/product/core_64bit.mk"
+          ls -l target/product/core_64bit.mk && echo "LOCKDOWN SUCCESSFUL"
+
+          # 5. Lunch and Build
           lunch ${{ github.event.inputs.MAKEFILE_NAME }}-eng
           mka recoveryimage vendorbootimage -j$(nproc --all)
 
