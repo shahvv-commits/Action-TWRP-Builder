@@ -64,37 +64,4 @@ jobs:
 
       - name: Clone Device Tree
         run: |
-          rm -rf workspace/${{ github.event.inputs.DEVICE_PATH }}
-          git clone ${{ github.event.inputs.DEVICE_TREE_URL }} -b ${{ github.event.inputs.DEVICE_TREE_BRANCH }} workspace/${{ github.event.inputs.DEVICE_PATH }}
-
-      - name: Set Swap Space
-        uses: pierotofy/set-swap-space@master
-        with:
-          swap-size-gb: 12
-
-      - name: Repairing Paths and Building
-        run: |
-          cd workspace
-          
-          # This creates the symlink structure that Minimal Manifests often lack
-          mkdir -p build/make
-          ln -sf ../../target build/make/target || true
-          
-          . build/envsetup.sh
-          export ALLOW_MISSING_DEPENDENCIES=true
-          export LC_ALL=C
-          
-          # Verification: This will show up in the logs to confirm the link worked
-          echo "Verifying core file accessibility:"
-          ls -l build/make/target/product/core_64bit.mk || echo "FILE NOT ACCESSIBLE"
-          
-          lunch ${{ github.event.inputs.MAKEFILE_NAME }}-eng
-          mka recoveryimage vendorbootimage -j$(nproc --all)
-
-      - name: Upload Artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: TWRP-P2TH-Images
-          path: |
-            workspace/out/target/product/${{ github.event.inputs.DEVICE_NAME }}/*.img
-          if-no-files-found: error
+          rm -rf workspace/${{ github.event.inputs.
