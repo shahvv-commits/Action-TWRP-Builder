@@ -76,19 +76,24 @@ jobs:
         run: |
           cd workspace
           
-          # Ensure the build tools exist
-          rm -rf build/make
-          git clone https://android.googlesource.com/platform/build -b android-12.1.0_r27 build/make --depth=1
-
-          # Verify the file is physically there for $(gettop) to find
-          ls -l build/make/target/product/core_64bit.mk
-
-          # Environment Setup
+          # 1. Download official build system core to a temp folder
+          echo "Downloading official Google Build Tools..."
+          git clone https://android.googlesource.com/platform/build -b android-12.1.0_r27 build_core --depth=1
+          
+          # 2. FLATTEN THE STRUCTURE
+          # We place the 'target' folder in the root so 'target/product/...' works
+          echo "Flattening build structure for minimal manifest..."
+          rm -rf target build/make
+          mkdir -p build/make
+          cp -r build_core/* build/make/
+          cp -r build_core/target .
+          
+          # 3. Environment Setup
           export ALLOW_MISSING_DEPENDENCIES=true
           export LC_ALL=C
           . build/make/envsetup.sh
           
-          # Lunch and Build
+          # 4. Lunch and Build
           lunch ${{ github.event.inputs.MAKEFILE_NAME }}-eng
           mka recoveryimage vendorbootimage -j$(nproc --all)
 
