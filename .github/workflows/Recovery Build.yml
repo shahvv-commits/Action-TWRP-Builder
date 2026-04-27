@@ -76,9 +76,9 @@ jobs:
         run: |
           cd workspace
           
-          # 1. Force the build system presence
-          # We wipe build/make because repo sync often leaves it empty/broken
-          echo "Cleaning and fetching official build tools..."
+          # 1. Clean and Fetch Build Tools
+          # We know this works from Build #98 logs
+          echo "Fetching official build tools..."
           rm -rf build/make
           git clone https://android.googlesource.com/platform/build -b android-12.1.0_r27 build/make --depth=1
 
@@ -89,21 +89,12 @@ jobs:
           # 3. Source envsetup
           . build/make/envsetup.sh
           
-          # 4. CRITICAL: Handle potential 'target' folder location mismatch
-          if [ -d "target" ] && [ ! -d "build/make/target" ]; then
-            ln -s ../../target build/make/target
-          fi
+          # 4. FORCE THE PATH VARIABLE
+          # We are using an absolute path to tell the Makefile exactly where the core is
+          export SRC_TARGET_DIR="$(pwd)/build/make/target"
+          echo "SRC_TARGET_DIR is set to: $SRC_TARGET_DIR"
 
-          # 5. Verification
-          if [ -f "build/make/target/product/core_64bit.mk" ]; then
-             echo "CORE FILE VERIFIED"
-          else
-             echo "ERROR: Build tools still missing or path incorrect"
-             ls -R build/make/target | head -n 20
-             exit 1
-          fi
-
-          # 6. Lunch and Build
+          # 5. Lunch and Build
           lunch ${{ github.event.inputs.MAKEFILE_NAME }}-eng
           mka recoveryimage vendorbootimage -j$(nproc --all)
 
