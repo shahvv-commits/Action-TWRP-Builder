@@ -76,28 +76,26 @@ jobs:
         run: |
           cd workspace
           
-          # 1. Clean and Direct Clone
-          # We clone directly into build/make to avoid any 'copy' errors
-          echo "Fetching official build tools directly..."
+          # 1. Physical Reconstruction
+          # Manually providing the official Google build core
+          echo "Providing build system core..."
           rm -rf build/make
           git clone https://android.googlesource.com/platform/build -b android-12.1.0_r27 build/make --depth=1
-          
-          # 2. Universal Verification
-          # We check for the specific file omni_P2TH.mk is looking for
-          if [ -f "build/make/target/product/core_64bit.mk" ]; then
-             echo "SUCCESS: Build system is physically ready."
-          else
-             echo "ERROR: Build system structure is unexpected."
-             find build/make -name core_64bit.mk
-             exit 1
-          fi
 
-          # 3. Environment Setup
+          # 2. Setup Environment Variables
           export ALLOW_MISSING_DEPENDENCIES=true
           export LC_ALL=C
+          
+          # 3. Source envsetup
+          # Use the freshly cloned Google tools
           . build/make/envsetup.sh
           
-          # 4. Lunch and Build
+          # 4. Define the Global variable used in omni_P2TH.mk
+          # This connects the Makefile's $(SRC_TARGET_DIR) to the real folder
+          export SRC_TARGET_DIR="$(pwd)/build/make/target"
+          echo "SRC_TARGET_DIR is physically set to: $SRC_TARGET_DIR"
+
+          # 5. Lunch and Build
           lunch ${{ github.event.inputs.MAKEFILE_NAME }}-eng
           mka recoveryimage vendorbootimage -j$(nproc --all)
 
