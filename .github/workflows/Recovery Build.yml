@@ -76,25 +76,25 @@ jobs:
         run: |
           cd workspace
           
-          # 1. Clean and Fetch Build Tools
-          # We know this works from Build #98 logs
-          echo "Fetching official build tools..."
+          # 1. Force the physical directory structure
+          echo "Reconstructing Build System..."
           rm -rf build/make
-          git clone https://android.googlesource.com/platform/build -b android-12.1.0_r27 build/make --depth=1
+          git clone https://android.googlesource.com/platform/build -b android-12.1.0_r27 build_tmp --depth=1
+          
+          # Move the core tools into the standard location
+          mkdir -p build/make
+          cp -r build_tmp/* build/make/
+          rm -rf build_tmp
 
-          # 2. Setup Environment Variables
+          # 2. Setup Environment
           export ALLOW_MISSING_DEPENDENCIES=true
           export LC_ALL=C
-          
-          # 3. Source envsetup
           . build/make/envsetup.sh
           
-          # 4. FORCE THE PATH VARIABLE
-          # We are using an absolute path to tell the Makefile exactly where the core is
-          export SRC_TARGET_DIR="$(pwd)/build/make/target"
-          echo "SRC_TARGET_DIR is set to: $SRC_TARGET_DIR"
+          # 3. Verification of physical existence
+          ls -l build/make/target/product/core_64bit.mk && echo "CORE FILE PHYSICALLY PRESENT"
 
-          # 5. Lunch and Build
+          # 4. Lunch and Build
           lunch ${{ github.event.inputs.MAKEFILE_NAME }}-eng
           mka recoveryimage vendorbootimage -j$(nproc --all)
 
