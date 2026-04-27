@@ -5,7 +5,7 @@ on:
     inputs:
       MANIFEST_URL:
         description: 'Recovery Manifest URL'
-        default: 'https://github.com/minimal-manifest-twrp/platform_manifest_twrp_omni'
+        default: 'https://github.com/minimal-manifest-twrp/platform_manifest_twrp_aosp'
       MANIFEST_BRANCH:
         description: 'Recovery Manifest Branch'
         default: 'twrp-12.1'
@@ -76,28 +76,23 @@ jobs:
         run: |
           cd workspace
           
-          # SAFETY NET: If the manifest sync missed the build tools, grab them directly
+          # SAFETY NET: Manually grab the build system because the manifest is incomplete
+          echo "Checking for build tools..."
           if [ ! -f "build/make/core/config.mk" ]; then
-            echo "Build tools missing. Manually fetching Android Build system..."
+            echo "Build tools missing. Manually fetching Android 12.1 Build system..."
             rm -rf build/make
-            git clone https://android.googlesource.com/platform/build -b android-12.1.0_r1 build/make --depth=1
+            git clone https://android.googlesource.com/platform/build -b android-12.1.0_r27 build/make --depth=1
           fi
           
-          # Load Environment
+          # Fix directory structure for Minimal Manifests
+          [ ! -d "build/make/target" ] && mkdir -p build/make && ln -s ../../target build/make/target
+
           . build/envsetup.sh
           export ALLOW_MISSING_DEPENDENCIES=true
           export LC_ALL=C
-          
-          # Ensure the variable is set for the Makefile
           export SRC_TARGET_DIR=$(pwd)/build/make/target
           
-          # Final Path Check
-          ls -l $SRC_TARGET_DIR/product/core_64bit.mk && echo "BUILD SYSTEM READY" || echo "BUILD SYSTEM STILL MISSING"
-          
-          # Execute Lunch
           lunch ${{ github.event.inputs.MAKEFILE_NAME }}-eng
-          
-          # Build images
           mka recoveryimage vendorbootimage -j$(nproc --all)
 
       - name: Upload Artifacts
