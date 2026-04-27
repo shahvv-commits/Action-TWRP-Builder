@@ -5,7 +5,7 @@ on:
     inputs:
       MANIFEST_URL:
         description: 'Recovery Manifest URL'
-        default: 'https://github.com/minimal-manifest-twrp/platform_manifest_twrp_aosp'
+        default: 'https://github.com/minimal-manifest-twrp/platform_manifest_twrp_omni'
       MANIFEST_BRANCH:
         description: 'Recovery Manifest Branch'
         default: 'twrp-12.1'
@@ -76,29 +76,23 @@ jobs:
         run: |
           cd workspace
           
-          # SEARCH LOGIC: Find the actual location of core files
-          echo "Searching for real target path..."
-          REAL_TARGET_PATH=$(find . -name core_64bit.mk | sed 's|/product/core_64bit.mk||' | head -n 1 | sed 's|^\./||')
-          
-          if [ -z "$REAL_TARGET_PATH" ]; then
-            echo "CRITICAL ERROR: core_64bit.mk not found in sync!"
-            exit 1
+          # SAFETY NET: If the manifest sync missed the build tools, grab them directly
+          if [ ! -f "build/make/core/config.mk" ]; then
+            echo "Build tools missing. Manually fetching Android Build system..."
+            rm -rf build/make
+            git clone https://android.googlesource.com/platform/build -b android-12.1.0_r1 build/make --depth=1
           fi
-          
-          echo "Real target path found at: $REAL_TARGET_PATH"
-          
-          # Create the bridge for the build system
-          mkdir -p build/make
-          ln -sf ../../$REAL_TARGET_PATH build/make/target
           
           # Load Environment
           . build/envsetup.sh
           export ALLOW_MISSING_DEPENDENCIES=true
           export LC_ALL=C
           
-          # Final path verification before lunch
-          echo "Verifying bridge path:"
-          ls -l build/make/target/product/core_64bit.mk && echo "SUCCESS: Path Linked" || echo "FAILURE: Path still broken"
+          # Ensure the variable is set for the Makefile
+          export SRC_TARGET_DIR=$(pwd)/build/make/target
+          
+          # Final Path Check
+          ls -l $SRC_TARGET_DIR/product/core_64bit.mk && echo "BUILD SYSTEM READY" || echo "BUILD SYSTEM STILL MISSING"
           
           # Execute Lunch
           lunch ${{ github.event.inputs.MAKEFILE_NAME }}-eng
