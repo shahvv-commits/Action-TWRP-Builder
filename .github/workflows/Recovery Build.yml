@@ -76,22 +76,26 @@ jobs:
         run: |
           cd workspace
           
-          # SAFETY NET: Manually grab the build system because the manifest is incomplete
-          echo "Checking for build tools..."
+          # 1. FORCE-FETCH BUILD SYSTEM (Must happen BEFORE sourcing envsetup)
+          echo "Force-checking build system tools..."
           if [ ! -f "build/make/core/config.mk" ]; then
-            echo "Build tools missing. Manually fetching Android 12.1 Build system..."
+            echo "Build tools missing! Manually cloning build system from Google..."
             rm -rf build/make
             git clone https://android.googlesource.com/platform/build -b android-12.1.0_r27 build/make --depth=1
           fi
-          
-          # Fix directory structure for Minimal Manifests
-          [ ! -d "build/make/target" ] && mkdir -p build/make && ln -s ../../target build/make/target
 
-          . build/envsetup.sh
+          # 2. Setup Environment Variables
           export ALLOW_MISSING_DEPENDENCIES=true
           export LC_ALL=C
-          export SRC_TARGET_DIR=$(pwd)/build/make/target
           
+          # 3. Source the build scripts
+          . build/envsetup.sh
+          
+          # 4. Final verification of the specific file the error kept hitting
+          echo "Verifying core_64bit.mk location..."
+          ls -l build/make/target/product/core_64bit.mk || echo "ERROR: Critical build file still missing"
+          
+          # 5. Lunch and Build
           lunch ${{ github.event.inputs.MAKEFILE_NAME }}-eng
           mka recoveryimage vendorbootimage -j$(nproc --all)
 
