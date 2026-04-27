@@ -76,15 +76,17 @@ jobs:
       - name: Building Recovery
         run: |
           cd workspace
-          # Source the build environment
           . build/envsetup.sh
+          
+          # Manually define the target directory if the manifest is weird
+          export SRC_TARGET_DIR=$(pwd)/build/make/target
+          [ ! -d "$SRC_TARGET_DIR" ] && export SRC_TARGET_DIR=$(pwd)/build/target
+          [ ! -d "$SRC_TARGET_DIR" ] && export SRC_TARGET_DIR=$(pwd)/target
+          
           export ALLOW_MISSING_DEPENDENCIES=true
           export LC_ALL=C
           
-          # Force lunch to recognize the device makefile
           lunch ${{ github.event.inputs.MAKEFILE_NAME }}-eng
-          
-          # Build recovery and vendor_boot images
           mka recoveryimage vendorbootimage -j$(nproc --all)
 
       - name: Upload Artifacts
