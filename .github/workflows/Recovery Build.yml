@@ -76,25 +76,19 @@ jobs:
         run: |
           cd workspace
           
-          # 1. PHYSICAL RECONSTRUCTION (Must happen before sourcing anything)
-          echo "Force-fetching official Google build tools..."
+          # 1. Clean and Direct Clone
+          # We clone directly into build/make to avoid any 'copy' errors
+          echo "Fetching official build tools directly..."
           rm -rf build/make
-          git clone https://android.googlesource.com/platform/build -b android-12.1.0_r27 build_tmp --depth=1
+          git clone https://android.googlesource.com/platform/build -b android-12.1.0_r27 build/make --depth=1
           
-          echo "Moving files to final location..."
-          mkdir -p build/make
-          cp -rp build_tmp/* build/make/
-          rm -rf build_tmp
-          
-          # Force sync the filesystem to ensure files are visible
-          sync
-          sleep 5
-
-          # 2. VERIFICATION (Check physical existence again)
+          # 2. Universal Verification
+          # We check for the specific file omni_P2TH.mk is looking for
           if [ -f "build/make/target/product/core_64bit.mk" ]; then
-             echo "SUCCESS: CORE FILE VERIFIED AT $(pwd)/build/make/target/product/core_64bit.mk"
+             echo "SUCCESS: Build system is physically ready."
           else
-             echo "CRITICAL FAILURE: Files not found after copy!"
+             echo "ERROR: Build system structure is unexpected."
+             find build/make -name core_64bit.mk
              exit 1
           fi
 
