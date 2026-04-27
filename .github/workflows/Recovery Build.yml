@@ -64,7 +64,6 @@ jobs:
 
       - name: Clone Device Tree
         run: |
-          # Prevent nested folders by removing target path first
           rm -rf workspace/${{ github.event.inputs.DEVICE_PATH }}
           git clone ${{ github.event.inputs.DEVICE_TREE_URL }} -b ${{ github.event.inputs.DEVICE_TREE_BRANCH }} workspace/${{ github.event.inputs.DEVICE_PATH }}
 
@@ -78,10 +77,9 @@ jobs:
           cd workspace
           . build/envsetup.sh
           
-          # Manually define the target directory if the manifest is weird
+          # Manually export the path to force the Makefile to find core_64bit.mk
           export SRC_TARGET_DIR=$(pwd)/build/make/target
           [ ! -d "$SRC_TARGET_DIR" ] && export SRC_TARGET_DIR=$(pwd)/build/target
-          [ ! -d "$SRC_TARGET_DIR" ] && export SRC_TARGET_DIR=$(pwd)/target
           
           export ALLOW_MISSING_DEPENDENCIES=true
           export LC_ALL=C
