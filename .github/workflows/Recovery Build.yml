@@ -67,20 +67,19 @@ jobs:
           rm -rf workspace/${{ github.event.inputs.DEVICE_PATH }}
           git clone ${{ github.event.inputs.DEVICE_TREE_URL }} -b ${{ github.event.inputs.DEVICE_TREE_BRANCH }} workspace/${{ github.event.inputs.DEVICE_PATH }}
 
-      - name: Set Swap Space
-        uses: pierotofy/set-swap-space@master
-        with:
-          swap-size-gb: 12
-
-      - name: Building Recovery
+      - name: Repairing Paths and Building
         run: |
           cd workspace
+          
+          # FORCE REPAIR: Standardize paths for Minimal Manifest
+          # This replaces any 'build/make/target' with just 'target'
+          sed -i 's|build/make/target|target|g' ${{ github.event.inputs.DEVICE_PATH }}/${{ github.event.inputs.MAKEFILE_NAME }}.mk
+          
+          # Verification
+          echo "Final Makefile Content:"
+          cat ${{ github.event.inputs.DEVICE_PATH }}/${{ github.event.inputs.MAKEFILE_NAME }}.mk
+          
           . build/envsetup.sh
-          
-          # Manually export the path to force the Makefile to find core_64bit.mk
-          export SRC_TARGET_DIR=$(pwd)/build/make/target
-          [ ! -d "$SRC_TARGET_DIR" ] && export SRC_TARGET_DIR=$(pwd)/build/target
-          
           export ALLOW_MISSING_DEPENDENCIES=true
           export LC_ALL=C
           
