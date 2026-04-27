@@ -76,21 +76,19 @@ jobs:
         run: |
           cd workspace
           
-          echo "Locating build core..."
-          ACTUAL_PATH=$(find . -name core_64bit.mk -print -quit | sed 's|/product/core_64bit.mk||' | sed 's|^\./||')
-          
-          if [ -z "$ACTUAL_PATH" ]; then
+          if [ ! -f "build/make/core/config.mk" ]; then
             echo "Build tools missing! Fetching from Google..."
             rm -rf build/make
             git clone https://android.googlesource.com/platform/build -b android-12.1.0_r27 build/make --depth=1
-            ACTUAL_PATH="build/make/target"
           fi
-          
-          echo "Found build core at: $ACTUAL_PATH"
 
-          mkdir -p build/make
-          rm -rf build/make/target
-          ln -s "$(pwd)/$ACTUAL_PATH" build/make/target
+          if [ ! -d "build/make/target/product" ]; then
+            ACTUAL_TARGET=$(find . -maxdepth 4 -name core_64bit.mk -print -quit | sed 's|/product/core_64bit.mk||' | sed 's|^\./||')
+            if [ ! -z "$ACTUAL_TARGET" ] && [ "$ACTUAL_TARGET" != "build/make/target" ]; then
+                mkdir -p build/make
+                ln -s "$(pwd)/$ACTUAL_TARGET" build/make/target
+            fi
+          fi
 
           export ALLOW_MISSING_DEPENDENCIES=true
           export LC_ALL=C
