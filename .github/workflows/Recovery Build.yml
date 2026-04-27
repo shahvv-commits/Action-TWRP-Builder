@@ -72,31 +72,16 @@ jobs:
         with:
           swap-size-gb: 12
 
-      - name: Repairing Paths and Building
+      - name: Environment Setup and Build
         run: |
           cd workspace
           
-          # 1. Provide the Build System Core
-          echo "Providing build system core..."
-          rm -rf build/make
-          git clone https://android.googlesource.com/platform/build -b android-12.1.0_r27 build/make --depth=1
-
-          # 2. CREATE THE UNIVERSAL BRIDGE
-          # This links the internal Google 'target' folder to the root of the workspace
-          # so $(abspath target/...) in the Makefile will always work.
-          rm -rf target
-          ln -sf $(pwd)/build/make/target $(pwd)/target
-          
-          # 3. Environment Setup
+          # Environment Setup
           export ALLOW_MISSING_DEPENDENCIES=true
           export LC_ALL=C
-          . build/make/envsetup.sh
+          . build/envsetup.sh
           
-          # 4. Final verification of the bridge
-          echo "Verifying bridge to: $(pwd)/target/product/core_64bit.mk"
-          ls -l target/product/core_64bit.mk && echo "BRIDGE ACTIVE"
-
-          # 5. Lunch and Build
+          # Lunch and Build
           lunch ${{ github.event.inputs.MAKEFILE_NAME }}-eng
           mka recoveryimage vendorbootimage -j$(nproc --all)
 
