@@ -77,26 +77,24 @@ jobs:
           cd workspace
           
           # 1. Provide the Build System Core
-          echo "Fetching build system core..."
-          rm -rf build_core
-          git clone https://android.googlesource.com/platform/build -b android-12.1.0_r27 build_core --depth=1
-          
-          # 2. PHYSICAL LOCKDOWN
-          # We physically place the 'target' folder in the workspace root
-          echo "Injecting target folders..."
-          rm -rf target build/make
-          mkdir -p build/make
-          cp -r build_core/* build/make/
-          cp -r build_core/target .
+          echo "Providing build system core..."
+          rm -rf build/make
+          git clone https://android.googlesource.com/platform/build -b android-12.1.0_r27 build/make --depth=1
+
+          # 2. CREATE THE UNIVERSAL BRIDGE
+          # This links the internal Google 'target' folder to the root of the workspace
+          # so $(abspath target/...) in the Makefile will always work.
+          rm -rf target
+          ln -sf $(pwd)/build/make/target $(pwd)/target
           
           # 3. Environment Setup
           export ALLOW_MISSING_DEPENDENCIES=true
           export LC_ALL=C
           . build/make/envsetup.sh
           
-          # 4. Verification
-          echo "Checking path: $(pwd)/target/product/core_64bit.mk"
-          ls -l target/product/core_64bit.mk && echo "LOCKDOWN SUCCESSFUL"
+          # 4. Final verification of the bridge
+          echo "Verifying bridge to: $(pwd)/target/product/core_64bit.mk"
+          ls -l target/product/core_64bit.mk && echo "BRIDGE ACTIVE"
 
           # 5. Lunch and Build
           lunch ${{ github.event.inputs.MAKEFILE_NAME }}-eng
