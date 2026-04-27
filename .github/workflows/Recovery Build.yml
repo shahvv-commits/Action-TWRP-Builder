@@ -76,28 +76,29 @@ jobs:
         run: |
           cd workspace
           
-          # 1. FORCE THE STRUCTURE
-          # If build/make/core/config.mk doesn't exist, we don't have a build system.
+          # 1. Ensure Build tools are physically present
           if [ ! -f "build/make/core/config.mk" ]; then
-            echo "Repairing Build System..."
+            echo "Repairing Build System Structure..."
             rm -rf build/make
             git clone https://android.googlesource.com/platform/build -b android-12.1.0_r27 build/make --depth=1
           fi
-          
-          # 2. Ensure target is exactly where it needs to be
-          # If target is in the root but not in build/make, link it.
-          if [ -d "target" ] && [ ! -d "build/make/target" ]; then
-            ln -s ../../target build/make/target
-          fi
+
+          # 2. Export the absolute path to the target directory
+          # This forces $(SRC_TARGET_DIR) in the Makefile to resolve correctly
+          export SRC_TARGET_DIR="$(pwd)/build/make/target"
+          echo "SRC_TARGET_DIR is set to: $SRC_TARGET_DIR"
 
           # 3. Environment Setup
           export ALLOW_MISSING_DEPENDENCIES=true
           export LC_ALL=C
           
-          # We source the build/make version specifically
+          # Source from the repaired build directory
           . build/make/envsetup.sh || . build/envsetup.sh
           
-          # 4. Lunch and Build
+          # 4. Final Verification
+          ls -l "$SRC_TARGET_DIR/product/core_64bit.mk" && echo "CORE FILE VERIFIED" || echo "CORE FILE MISSING"
+          
+          # 5. Lunch and Build
           lunch ${{ github.event.inputs.MAKEFILE_NAME }}-eng
           mka recoveryimage vendorbootimage -j$(nproc --all)
 
