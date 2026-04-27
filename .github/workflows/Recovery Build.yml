@@ -76,12 +76,12 @@ jobs:
         run: |
           cd workspace
           
-          # Fix the build system core
+          # Ensure the build tools exist
           rm -rf build/make
           git clone https://android.googlesource.com/platform/build -b android-12.1.0_r27 build/make --depth=1
 
-          # Ensure 'target' is accessible from the root for the Makefile
-          ln -sf build/make/target target
+          # Verify the file is physically there for $(gettop) to find
+          ls -l build/make/target/product/core_64bit.mk
 
           # Environment Setup
           export ALLOW_MISSING_DEPENDENCIES=true
