@@ -76,33 +76,7 @@ jobs:
         run: |
           cd workspace
           
-          # 1. FORCE-FETCH BUILD SYSTEM (Must happen BEFORE sourcing envsetup)
-          echo "Force-checking build system tools..."
-          if [ ! -f "build/make/core/config.mk" ]; then
-            echo "Build tools missing! Manually cloning build system from Google..."
-            rm -rf build/make
-            git clone https://android.googlesource.com/platform/build -b android-12.1.0_r27 build/make --depth=1
-          fi
-
-          # 2. Setup Environment Variables
-          export ALLOW_MISSING_DEPENDENCIES=true
-          export LC_ALL=C
-          
-          # 3. Source the build scripts
-          . build/envsetup.sh
-          
-          # 4. Final verification of the specific file the error kept hitting
-          echo "Verifying core_64bit.mk location..."
-          ls -l build/make/target/product/core_64bit.mk || echo "ERROR: Critical build file still missing"
-          
-          # 5. Lunch and Build
-          lunch ${{ github.event.inputs.MAKEFILE_NAME }}-eng
-          mka recoveryimage vendorbootimage -j$(nproc --all)
-
-      - name: Upload Artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: TWRP-P2TH-Images
-          path: |
-            workspace/out/target/product/${{ github.event.inputs.DEVICE_NAME }}/*.img
-          if-no-files-found: error
+          # 1. DYNAMIC SEARCH: Find where core_64bit.mk actually lives
+          echo "Locating build core..."
+          # This scans everything to find the real path of the build tools
+          ACTUAL_PATH=$(find . -name core_64bit.mk | sed 's|/product/core_64bit.mk||' | head -n 1 | sed 's|^\
