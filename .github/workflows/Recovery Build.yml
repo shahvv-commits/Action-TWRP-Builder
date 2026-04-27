@@ -71,13 +71,9 @@ jobs:
         run: |
           cd workspace
           
-          # FORCE REPAIR: Standardize paths for Minimal Manifest
-          # This replaces any 'build/make/target' with just 'target'
-          sed -i 's|build/make/target|target|g' ${{ github.event.inputs.DEVICE_PATH }}/${{ github.event.inputs.MAKEFILE_NAME }}.mk
-          
-          # Verification
-          echo "Final Makefile Content:"
-          cat ${{ github.event.inputs.DEVICE_PATH }}/${{ github.event.inputs.MAKEFILE_NAME }}.mk
+          # Fix the build/make symlink which is often missing in minimal manifests
+          mkdir -p build/make
+          ln -s ../target build/make/target || true
           
           . build/envsetup.sh
           export ALLOW_MISSING_DEPENDENCIES=true
