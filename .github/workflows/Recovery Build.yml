@@ -76,37 +76,33 @@ jobs:
         run: |
           cd workspace
           
-          # 1. Find the REAL location of the core files
-          echo "Scanning for core_64bit.mk..."
-          REAL_PATH=$(find . -name core_64bit.mk | head -n 1)
-          
-          if [ -z "$REAL_PATH" ]; then
-            echo "Build tools missing! Fetching fresh set from Google..."
-            rm -rf build/make
-            git clone https://android.googlesource.com/platform/build -b android-12.1.0_r27 build/make --depth=1
-            REAL_PATH=$(find . -name core_64bit.mk | head -n 1)
-          fi
-          
-          echo "Real file found at: $REAL_PATH"
-          
-          # 2. Extract the base 'target' directory
-          # Strip the filename to get the directory containing 'product'
-          TARGET_DIR=$(echo $REAL_PATH | sed 's|/product/core_64bit.mk||' | sed 's|^\./||')
-          
-          # 3. Create THE BRIDGES
-          # This maps the found path to the 'target' folder your Makefile expects
-          rm -rf target
-          ln -sf "$(pwd)/$TARGET_DIR" "$(pwd)/target"
-          
-          # 4. Verification
-          echo "Verifying Bridge:"
-          ls -l target/product/core_64bit.mk && echo "BRIDGE SUCCESSFUL" || echo "BRIDGE FAILED"
+          # 1. Force the build system presence
+          # We wipe build/make because repo sync often leaves it empty/broken
+          echo "Cleaning and fetching official build tools..."
+          rm -rf build/make
+          git clone https://android.googlesource.com/platform/build -b android-12.1.0_r27 build/make --depth=1
 
-          # 5. Environment Setup
+          # 2. Setup Environment Variables
           export ALLOW_MISSING_DEPENDENCIES=true
           export LC_ALL=C
-          . build/envsetup.sh || . build/make/envsetup.sh
           
+          # 3. Source envsetup
+          . build/make/envsetup.sh
+          
+          # 4. CRITICAL: Handle potential 'target' folder location mismatch
+          if [ -d "target" ] && [ ! -d "build/make/target" ]; then
+            ln -s ../../target build/make/target
+          fi
+
+          # 5. Verification
+          if [ -f "build/make/target/product/core_64bit.mk" ]; then
+             echo "CORE FILE VERIFIED"
+          else
+             echo "ERROR: Build tools still missing or path incorrect"
+             ls -R build/make/target | head -n 20
+             exit 1
+          fi
+
           # 6. Lunch and Build
           lunch ${{ github.event.inputs.MAKEFILE_NAME }}-eng
           mka recoveryimage vendorbootimage -j$(nproc --all)
