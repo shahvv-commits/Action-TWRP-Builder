@@ -64,4 +64,52 @@ jobs:
 
       - name: Clone Device Tree
         run: |
-          rm -rf workspace/${{ github.event.inputs.
+          rm -rf workspace/${{ github.event.inputs.DEVICE_PATH }}
+          git clone ${{ github.event.inputs.DEVICE_TREE_URL }} -b ${{ github.event.inputs.DEVICE_TREE_BRANCH }} workspace/${{ github.event.inputs.DEVICE_PATH }}
+
+      - name: Set Swap Space
+        uses: pierotofy/set-swap-space@master
+        with:
+          swap-size-gb: 12
+
+      - name: Repairing Paths and Building
+        run: |
+          cd workspace
+          
+          # SEARCH LOGIC: Find the actual location of core files
+          echo "Searching for real target path..."
+          REAL_TARGET_PATH=$(find . -name core_64bit.mk | sed 's|/product/core_64bit.mk||' | head -n 1 | sed 's|^\./||')
+          
+          if [ -z "$REAL_TARGET_PATH" ]; then
+            echo "CRITICAL ERROR: core_64bit.mk not found in sync!"
+            exit 1
+          fi
+          
+          echo "Real target path found at: $REAL_TARGET_PATH"
+          
+          # Create the bridge for the build system
+          mkdir -p build/make
+          ln -sf ../../$REAL_TARGET_PATH build/make/target
+          
+          # Load Environment
+          . build/envsetup.sh
+          export ALLOW_MISSING_DEPENDENCIES=true
+          export LC_ALL=C
+          
+          # Final path verification before lunch
+          echo "Verifying bridge path:"
+          ls -l build/make/target/product/core_64bit.mk && echo "SUCCESS: Path Linked" || echo "FAILURE: Path still broken"
+          
+          # Execute Lunch
+          lunch ${{ github.event.inputs.MAKEFILE_NAME }}-eng
+          
+          # Build images
+          mka recoveryimage vendorbootimage -j$(nproc --all)
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: TWRP-P2TH-Images
+          path: |
+            workspace/out/target/product/${{ github.event.inputs.DEVICE_NAME }}/*.img
+          if-no-files-found: error
