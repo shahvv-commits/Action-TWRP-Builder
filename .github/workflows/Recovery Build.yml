@@ -76,24 +76,28 @@ jobs:
         run: |
           cd workspace
           
+          # 1. FORCE THE STRUCTURE
+          # If build/make/core/config.mk doesn't exist, we don't have a build system.
           if [ ! -f "build/make/core/config.mk" ]; then
-            echo "Build tools missing! Fetching from Google..."
+            echo "Repairing Build System..."
             rm -rf build/make
             git clone https://android.googlesource.com/platform/build -b android-12.1.0_r27 build/make --depth=1
           fi
-
-          if [ ! -d "build/make/target/product" ]; then
-            ACTUAL_TARGET=$(find . -maxdepth 4 -name core_64bit.mk -print -quit | sed 's|/product/core_64bit.mk||' | sed 's|^\./||')
-            if [ ! -z "$ACTUAL_TARGET" ] && [ "$ACTUAL_TARGET" != "build/make/target" ]; then
-                mkdir -p build/make
-                ln -s "$(pwd)/$ACTUAL_TARGET" build/make/target
-            fi
+          
+          # 2. Ensure target is exactly where it needs to be
+          # If target is in the root but not in build/make, link it.
+          if [ -d "target" ] && [ ! -d "build/make/target" ]; then
+            ln -s ../../target build/make/target
           fi
 
+          # 3. Environment Setup
           export ALLOW_MISSING_DEPENDENCIES=true
           export LC_ALL=C
-          . build/envsetup.sh
           
+          # We source the build/make version specifically
+          . build/make/envsetup.sh || . build/envsetup.sh
+          
+          # 4. Lunch and Build
           lunch ${{ github.event.inputs.MAKEFILE_NAME }}-eng
           mka recoveryimage vendorbootimage -j$(nproc --all)
 
