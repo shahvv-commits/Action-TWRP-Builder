@@ -17,6 +17,7 @@ jobs:
       - name: Checkout Device Tree
         uses: actions/checkout@v4
         with:
+          repository: shahvv-commits/android_device_doogee_P2TH
           path: device/doogee/P2TH
 
       - name: Download Stock vendor_boot for Repacking
